@@ -1,0 +1,1 @@
+g++ third14.cpp -lcurses -o BlackJack
