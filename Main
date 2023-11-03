@@ -1,0 +1,336 @@
+#include <ncurses.h>
+#include <iostream>
+#include <time.h>
+
+#define QUANTITY 52
+//#define KEY_ENTER 0x157
+
+using namespace std;
+class field
+{
+ private:
+ public:
+};
+class Hand //мои текущие карты
+{
+ private:
+	int Compound[QUANTITY]; //что у меня в руке
+ public:
+	Hand() //начальные условия
+	{
+                for (int i = 0; i<QUANTITY; i++)
+                Compound[i] = 0;
+        }
+	void NullHand()
+	{
+		for (int i = 0; i<QUANTITY; i++)
+                Compound[i] = 0;
+	}
+	void SetCard(int a, int b) //какуюто по счету карту в руке присваиваю
+	{
+		Compound[a] = b;
+	}
+	void GetCompound() //вывожу все карты с руки
+	{
+		int j = 0;
+		for (int i = 0; i<QUANTITY; i++)
+		{
+			j = i;
+			if (Compound[j] != 0)
+			{
+				printw("%d",Compound[j]);
+                        	printw("\t");
+			}
+		}
+		printw("\n");
+		refresh();
+	}
+	int GetCard(int a)
+	{
+		return Compound[a];
+	}
+	int GetPrice(int a)
+	{
+		if (Compound[a]<11)
+			return Compound[a];
+		if (Compound[a]>10)
+			return 10;
+		if (Compound[a]==14)
+			return 11;
+		return 0;
+	}
+};
+class Deck
+{
+ private:
+	int Amount; //сколькокарт в колоде
+        int Compound[QUANTITY]; //колода
+        int RemCompound[QUANTITY]; //хз что это мб надо не помню
+ public:
+        int GetAmount() //сколько в колоде
+	{
+        	return Amount;
+	}
+	void SetAmount(int a) //сделать столько в колоде
+	{
+		Amount = a;
+	}
+        void GenCompound() //создание не перетусованной колоды
+        {
+        	int z = 2;
+        	for (int i = 0; i < QUANTITY; i+=4)
+       		{
+            		for (int j = 0; j < 4; j++)
+            		{
+                		Compound[i+j] = z;
+            		}
+            		z++;
+                }
+	}
+        void CheckCompound() //вывод колоды
+        {
+		for (int i = 0; i < QUANTITY; i++)
+        	{
+        		printw("%d",Compound[i]);
+			printw("\n");
+        	}
+		refresh();
+	}
+        void CompoundShake() //замешать колоду
+        {
+        	for (int i = 0; i < 1000; i++)
+        	{
+                	int j = rand() % QUANTITY;
+                	int temp = Compound[j];
+                	Compound[j] = Compound[i % QUANTITY];
+            		Compound[i % QUANTITY] = temp;
+                }
+        }
+    	int TakeCard(int a) //взять какуюто карту
+    	{
+		if (Compound[a]!=0)
+		{
+			int temp = Compound[a];
+			Compound[a] = 0;
+			return temp;
+		}
+		else return 0;
+        }
+};
+int main()
+{
+	initscr();
+	curs_set(0);
+	noecho();
+        srand(time(NULL));
+        Deck Deck1;
+	int balance = 1000;
+	Hand PlayerHand;
+	Hand DillerHand;
+        Deck1.SetAmount(QUANTITY);
+        Deck1.GenCompound();
+        //Deck1.CheckCompound();
+        Deck1.CompoundShake();
+	bool Govno = false;
+	bool endgame = false;
+	int kostil = 0;
+	int round = 1;
+	while (!endgame)
+	{
+		pivot2:
+		if (balance<=0)
+		{
+			printw("ahahahahahahah LOSER XDXDXDXD\n");
+			goto lose;
+		}
+		clear();
+		printw("ROUND%d(ctrl-z to exit)\n",round);
+		round++;
+		if (kostil>=50)
+		{
+			printw("\tNEW DECK\n********************************\n");
+			Deck1.GenCompound();
+			Deck1.CompoundShake();
+			kostil = 0;
+		}
+		printw("Balance is %d \n", balance);
+		printw("Set debt (< >, 1 to confirm)\n50");
+		int debt = 50;
+		bool flag = false;
+		while (flag == false)
+		{
+			keypad(stdscr, true);
+			switch ( getch() )
+        		{
+            			case KEY_LEFT:
+					if (debt > 50)
+					{
+						deleteln();
+						move(3,0);
+						debt-=50;
+						printw("%d",debt);
+						refresh();
+					}
+					else
+					{
+						deleteln();
+						move(3,0);
+						printw("Debt must be > 0");
+					}
+                			break;
+            			case KEY_RIGHT:
+					if (debt<=balance-50)
+					{
+						deleteln();
+						move(3,0);
+						debt+=50;
+						printw("%d",debt);
+						refresh();
+					}
+					else
+					{
+						deleteln();
+						move(3,0);
+						printw("You are too poor((((((");
+					}
+					break;
+				case '1':
+					printw("\nYour debt is %d\n",debt);
+					flag = 1;
+					break;
+			}
+        }
+		balance-=debt;
+		int win = (3*(debt/2));
+		bool end = false;
+		DillerHand.NullHand();
+		PlayerHand.NullHand();
+		printw("Balance is %d \n", balance);
+		DillerHand.SetCard(0, Deck1.TakeCard(kostil));
+		PlayerHand.SetCard(0, Deck1.TakeCard(kostil+1));
+		PlayerHand.SetCard(1, Deck1.TakeCard(kostil+2));
+		//DillerHand.SetCard(0, 5);
+		//DillerHand.SetCard(0, 10);
+                //PlayerHand.SetCard(0, 10);
+                //PlayerHand.SetCard(1, 14);
+		int sumplayer = PlayerHand.GetPrice(0)+PlayerHand.GetPrice(1);
+                int sumdiller = DillerHand.GetPrice(0);
+		DillerHand.GetCompound();
+                PlayerHand.GetCompound();
+		printw("Your sum is %d\n",sumplayer);
+		if (((PlayerHand.GetCard(0) == 14) &&  (PlayerHand.GetCard(1) > 9) && (PlayerHand.GetCard(1) < 14)) || ((PlayerHand.GetCard(1) == 14) &&  (PlayerHand.GetCard(0) > 9) && (PlayerHand.GetCard(0) < 14)))
+		{															//приколы с начала
+			if (DillerHand.GetCard(0) < 10)
+			{
+				printw("BLACK-JACK\n");
+				goto pobeda;
+			}
+			else
+			{
+				halfdelay(100);
+				printw("1 - 1 IN 1; 2 - CONTINUE\n");
+				bool ex = false;
+   				while ( !ex )
+				{
+        				int ch = getch();
+        				switch ( ch )
+        				{
+        					case ERR:
+            						printw("********************************\nPlease, press 1 or 2\n********************************\n");
+            						break;
+        					case '1':
+							printw("1 IN 1\n"); //1 к 1
+							ex = true;
+							balance = balance + debt;
+							goto pivot2;
+							break;
+						case '2':
+							printw("CONTINUE\n"); //продолжение игры с блекджеком
+							ex = true;
+							goto pivoshtrih;
+							break;
+						default:
+							printw("********************************\nPlease, press 1 or 2\n********************************\n");
+							break;
+        				}
+				getch();
+        			refresh(); //Выводим на настоящий экран
+				}
+			}
+		}
+		//end = true;
+		int iplayer;
+		int idiller;
+		while (!end)
+		{
+			pivoshtrih:
+			idiller = 1;
+			iplayer = 2;
+			pivo:
+			printw("********************************\nWant to take more?\n1 - yes 2 - no\n********************************\n");
+			int ans = getch();
+			switch (ans)
+			{
+				case ERR:
+					printw("Please, press 1 or 2\n********************************\n");
+                                        break;
+                                case '1':
+					PlayerHand.SetCard(iplayer, Deck1.TakeCard(kostil+iplayer+idiller));
+					sumplayer += PlayerHand.GetPrice(iplayer);
+					PlayerHand.GetCompound();
+					iplayer++;
+					printw("sumplayer is %d\n",sumplayer);
+					printw("********************************\n");
+					if (sumplayer > 21)
+                        		{
+                        			printw("you lose, your sum is %d((((\n", sumplayer);
+						goto skip;
+                        		}
+					goto pivo;
+                                        break;
+                                case '2':
+					do
+					{
+                                        	printw("Diller turn\n");
+						DillerHand.SetCard(idiller, Deck1.TakeCard(kostil+iplayer+idiller));
+						sumdiller += DillerHand.GetPrice(idiller);
+						idiller++;
+						printw("sumdiller is %d\n",sumdiller);
+						DillerHand.GetCompound();
+						printw("********************************\n");
+					}
+					while (sumdiller<=17);
+					goto pivot1;
+                                        break;
+                                default:
+                                        printw("Please, press 1 or 2\n********************************\n");
+                                        break;
+			}
+		}
+		pivot1:
+		if (sumdiller>21) goto pobeda;
+		if (sumdiller == sumplayer)
+		{
+			printw("1 IN 1\n"); //1 к 1
+                        balance = balance + debt;
+                        goto pivot2;
+		}
+		if (sumdiller<sumplayer)
+		{
+			pobeda:
+			printw("YOU WIN %d\nYOUR BALANCE IS %d\n", (win), (balance+win));
+			balance+=(win);
+		}
+		else printw("YOU LOSE\n");
+		skip:
+		kostil+=idiller+iplayer;
+		printw("********************************\n");
+		getch();
+	}
+	lose:
+	//Hand1.SetCard(6,Deck1.TakeCard(6));
+	//Hand1.GetCompound();
+        //Deck1.CheckCompound();
+        endwin();
+        return 0;
+}
